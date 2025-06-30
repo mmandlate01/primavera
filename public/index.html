@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Event Manager</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+    header { background: #333; color: #fff; padding: 20px 0; margin-bottom: 30px; }
+    header h1 { text-align: center; }
+    .auth-form { max-width: 400px; margin: 50px auto; padding: 20px; border: 1px solid #ddd; border-radius: 5px; }
+    .auth-form h2 { margin-bottom: 20px; text-align: center; }
+    .form-group { margin-bottom: 15px; }
+    .form-group label { display: block; margin-bottom: 5px; }
+    .form-group input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
+    button { background: #333; color: #fff; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; }
+    button:hover { background: #555; }
+    .dashboard { display: grid; grid-template-columns: 250px 1fr; gap: 20px; }
+    .sidebar { background: #f4f4f4; padding: 20px; border-radius: 5px; }
+    .main-content { padding: 20px; }
+    .event-card { border: 1px solid #ddd; border-radius: 5px; padding: 15px; margin-bottom: 15px; }
+    .event-card h3 { margin-bottom: 10px; }
+    .tab-container { margin-top: 20px; }
+    .tab-buttons { display: flex; border-bottom: 1px solid #ddd; }
+    .tab-button { padding: 10px 20px; background: none; border: none; cursor: pointer; }
+    .tab-button.active { border-bottom: 2px solid #333; font-weight: bold; }
+    .tab-content { padding: 20px 0; display: none; }
+    .tab-content.active { display: block; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    table th, table td { padding: 10px; border: 1px solid #ddd; text-align: left; }
+    table th { background: #f4f4f4; }
+    .checkin-container { max-width: 600px; margin: 0 auto; text-align: center; }
+    .checkin-result { margin-top: 20px; padding: 20px; border-radius: 5px; }
+    .valid { background: #d4edda; color: #155724; }
+    .invalid { background: #f8d7da; color: #721c24; }
+    @media (max-width: 768px) {
+      .dashboard { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1>Event Manager</h1>
+    </header>
+    
+    <div class="container">
+      <!-- Página de Login -->
+      <div id="login-page" class="auth-form">
+        <h2>Login</h2>
+        <div class="form-group">
+          <label for="login-email">Email</label>
+          <input type="email" id="login-email" placeholder="Seu email">
+        </div>
+        <div class="form-group">
+          <label for="login-password">Senha</label>
+          <input type="password" id="login-password" placeholder="Sua senha">
+        </div>
+        <button id="login-btn">Entrar</button>
+      </div>
+      
+      <!-- Dashboard -->
+      <div id="dashboard" style="display: none;">
+        <div class="dashboard">
+          <div class="sidebar">
+            <h3>Meus Eventos</h3>
+            <ul id="event-list"></ul>
+            <button id="create-event-btn">Criar Novo Evento</button>
+          </div>
+          
+          <div class="main-content">
+            <h2 id="event-title"></h2>
+            
+            <div class="tab-container">
+              <div class="tab-buttons">
+                <button class="tab-button active" data-tab="guests">Convidados</button>
+                <button class="tab-button" data-tab="tables">Mesas</button>
+                <button class="tab-button" data-tab="checkin">Check-in</button>
+                <button class="tab-button" data-tab="reports">Relatórios</button>
+                <button class="tab-button" data-tab="backup">Backup</button>
+              </div>
+              
+              <div id="guests" class="tab-content active">
+                <h3>Lista de Convidados</h3>
+                <button id="add-guest-btn">Adicionar Convidado</button>
+                <table id="guest-table">
+                  <thead>
+                    <tr>
+                      <th>Nome</th>
+                      <th>Email</th>
+                      <th>Status</th>
+                      <th>Mesa</th>
+                      <th>Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+              
+              <div id="tables" class="tab-content">
+                <h3>Mesas</h3>
+                <button id="add-table-btn">Adicionar Mesa</button>
+                <table id="table-table">
+                  <thead>
+                    <tr>
+                      <th>Nome</th>
+                      <th>Capacidade</th>
+                      <th>Status</th>
+                      <th>Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody></tbody>
+                </table>
+              </div>
+              
+              <div id="checkin" class="tab-content">
+                <div class="checkin-container">
+                  <h3>Check-in de Convidados</h3>
+                  <div class="form-group">
+                    <input type="text" id="checkin-code" placeholder="Digite o código ou escaneie o QR">
+                  </div>
+                  <button id="checkin-btn">Verificar</button>
+                  <div id="checkin-result" class="checkin-result" style="display: none;"></div>
+                </div>
+              </div>
+              
+              <div id="reports" class="tab-content">
+                <h3>Relatórios</h3>
+                <div id="report-stats">
+                  <p>Total de convidados: <span id="total-guests">0</span></p>
+                  <p>Confirmados: <span id="confirmed-guests">0</span></p>
+                  <p>Check-ins: <span id="checked-in-guests">0</span></p>
+                  <p>Ocupação de mesas: <span id="tables-occupancy">0%</span></p>
+                </div>
+              </div>
+              
+              <div id="backup" class="tab-content">
+                <h3>Backup e Restauração</h3>
+                <div class="form-group">
+                  <label for="backup-password">Senha para backup</label>
+                  <input type="password" id="backup-password" placeholder="Digite uma senha segura">
+                </div>
+                <button id="create-backup-btn">Criar Backup</button>
+                
+                <h4 style="margin-top: 30px;">Restaurar Backup</h4>
+                <div class="form-group">
+                  <label for="restore-file">Arquivo de backup</label>
+                  <input type="file" id="restore-file">
+                </div>
+                <div class="form-group">
+                  <label for="restore-password">Senha do backup</label>
+                  <input type="password" id="restore-password" placeholder="Digite a senha do backup">
+                </div>
+                <button id="restore-backup-btn">Restaurar Backup</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Estado da aplicação
+    let state = {
+      token: null,
+      user: null,
+      currentEvent: null,
+      events: [],
+      guests: [],
+      tables: []
+    };
+
+    // Elementos DOM
+    const loginPage = document.getElementById('login-page');
+    const dashboard = document.getElementById('dashboard');
+    const loginEmail = document.getElementById('login-email');
+    const loginPassword = document.getElementById('login-password');
+    const loginBtn = document.getElementById('login-btn');
+    const eventList = document.getElementById('event-list');
+    const eventTitle = document.getElementById('event-title');
+    const createEventBtn = document.getElementById('create-event-btn');
+    const guestTable = document.getElementById('guest-table').querySelector('tbody');
+    const addGuestBtn = document.getElementById('add-guest-btn');
+    const tableTable = document.getElementById('table-table').querySelector('tbody');
+    const addTableBtn = document.getElementById('add-table-btn');
+    const checkinCode = document.getElementById('checkin-code');
+    const checkinBtn = document.getElementById('checkin-btn');
+    const checkinResult = document.getElementById('checkin-result');
+    const tabButtons = document.querySelectorAll('.tab-button');
+    const tabContents = document.querySelectorAll('.tab-content');
+    const backupPassword = document.getElementById('backup-password');
+    const createBackupBtn = document.getElementById('create-backup-btn');
+    const restoreFile = document.getElementById('restore-file');
+    const restorePassword = document.getElementById('restore-password');
+    const restoreBackupBtn = document.getElementById('restore-backup-btn');
+    const reportStats = document.getElementById('report-stats');
+
+    // Funções auxiliares
+    function showError(message) {
+      alert('Erro: ' + message);
+    }
+
+    function apiRequest(url, method = 'GET', data = null) {
+      const headers = {
+        'Content-Type': 'application/json'
+      };
+      
+      if (state.token) {
+        headers['Authorization'] = 'Bearer ' + state.token;
+      }
+      
+      return fetch(url, {
+        method,
+        headers,
+        body: data ? JSON.stringify(data) : null
+      })
+      .then(response => {
+        if (!response.ok) {
+          return response.json().then(err => {
+            throw new Error(err.error || 'Erro na requisição');
+          });
+        }
+        return response.json();
+      });
+    }
+
+    // Tabs
+    tabButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        const tabId = button.getAttribute('data-tab');
+        
+        tabButtons.forEach(btn => btn.classList.remove('active'));
+        tabContents.forEach(content => content.classList.remove('active'));
+        
+        button.classList.add('active');
+        document.getElementById(tabId).classList.add('active');
+        
+        if (tabId === 'guests') loadGuests();
+        if (tabId === 'tables') loadTables();
+        if (tabId === 'reports') loadReports();
+      });
+    });
+
+    // Login
+    loginBtn.addEventListener('click', () => {
+      const email = loginEmail.value;
+      const password = loginPassword.value;
+      
+      if (!email || !password) {
+        return showError('Email e senha são obrigatórios');
+      }
+      
+      apiRequest('/api/login', 'POST', { email, password })
+        .then(data => {
+          state.token = data.token;
+          state.user = data.user;
+          
+          loginPage.style.display = 'none';
+          dashboard.style.display = 'block';
+          
+          loadEvents();
+        })
+        .catch(showError);
+    });
+
+    // Eventos
+    function loadEvents() {
+      apiRequest('/api/events')
+        .then(events => {
+          state.events = events;
+          renderEvents();
+        })
+        .catch(showError);
+    }
+
+    function renderEvents() {
+      eventList.innerHTML = '';
+      
+      state.events.forEach(event => {
+        const li = document.createElement('li');
+        const a = document.createElement('a');
+        a.href = '#';
+        a.textContent = event.name;
+        a.addEventListener('click', (e) => {
+          e.preventDefault();
+          selectEvent(event);
+        });
+        
+        li.appendChild(a);
+        eventList.appendChild(li);
+      });
+    }
+
+    function selectEvent(event) {
+      state.currentEvent = event;
+      eventTitle.textContent = event.name;
+      loadGuests();
+      loadTables();
+    }
+
+    createEventBtn.addEventListener('click', () => {
+      const name = prompt('Nome do evento:');
+      if (!name) return;
+      
+      const type = prompt('Tipo (wedding, birthday, conference, baptism):');
+      if (!type) return;
+      
+      const date = prompt('Data (YYYY-MM-DD):');
+      if (!date) return;
+      
+      const location = prompt('Local:');
+      if (!location) return;
+      
+      const maxGuests = prompt('Número máximo de convidados:');
+      if (!maxGuests) return;
+      
+      const maxTables = prompt('Número máximo de mesas:');
+      if (!maxTables) return;
+      
+      apiRequest('/api/events', 'POST', {
+        name,
+        type,
+        date,
+        location,
+        max_guests: parseInt(maxGuests),
+        max_tables: parseInt(maxTables)
+      })
+      .then(() => {
+        loadEvents();
+      })
+      .catch(showError);
+    });
+
+    // Convidados
+    function loadGuests() {
+      if (!state.currentEvent) return;
+      
+      apiRequest('/api/events/' + state.currentEvent.id + '/guests')
+        .then(guests => {
+          state.guests = guests;
+          renderGuests();
+        })
+        .catch(showError);
+    }
+
+    function renderGuests() {
+      guestTable.innerHTML = '';
+      
+      state.guests.forEach(guest => {
+        const tr = document.createElement('tr');
+        
+        tr.innerHTML = '<td>' + guest.name + '</td>' +
+          '<td>' + (guest.email || '-') + '</td>' +
+          '<td>' + guest.status + '</td>' +
+          '<td>' + (guest.table_id || '-') + '</td>' +
+          '<td>' +
+          '<button class="assign-table-btn" data-guest-id="' + guest.id + '">Atribuir Mesa</button>' +
+          '<a href="/api/events/' + state.currentEvent.id + '/guests/' + guest.id + '/invite" target="_blank">Convite</a>' +
+          '</td>';
+        
+        guestTable.appendChild(tr);
+      });
+      
+      // Adicionar eventos aos botões de atribuir mesa
+      document.querySelectorAll('.assign-table-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const guestId = btn.getAttribute('data-guest-id');
+          assignTable(guestId);
+        });
+      });
+    }
+
+    function assignTable(guestId) {
+      if (!state.tables.length) {
+        return showError('Primeiro crie algumas mesas');
+      }
+      
+      const tableOptions = state.tables.map((table, index) => 
+        index + ': ' + table.name + ' (' + table.capacity + ' lugares, ' + table.status + ')'
+      ).join('\n');
+      
+      const tableIndex = prompt('Escolha a mesa (0-' + (state.tables.length-1) + '):\n' + tableOptions);
+      if (tableIndex === null) return;
+      
+      const tableId = state.tables[parseInt(tableIndex)]?.id;
+      if (!tableId) return;
+      
+      apiRequest(
+        '/api/events/' + state.currentEvent.id + '/guests/' + guestId + '/assign-table',
+        'PUT',
+        { tableId }
+      )
+      .then(() => {
+        loadGuests();
+        loadTables();
+      })
+      .catch(showError);
+    }
+
+    addGuestBtn.addEventListener('click', () => {
+      const name = prompt('Nome do convidado:');
+      if (!name) return;
+      
+      const email = prompt('Email (opcional):');
+      const phone = prompt('Telefone (opcional):');
+      const dietary = prompt('Restrições alimentares (opcional):');
+      
+      apiRequest('/api/events/' + state.currentEvent.id + '/guests', 'POST', {
+        name,
+        email,
+        phone,
+        dietary_requirements: dietary
+      })
+      .then(() => {
+        loadGuests();
+      })
+      .catch(showError);
+    });
+
+    // Mesas
+    function loadTables() {
+      if (!state.currentEvent) return;
+      
+      apiRequest('/api/events/' + state.currentEvent.id + '/tables')
+        .then(tables => {
+          state.tables = tables;
+          renderTables();
+        })
+        .catch(showError);
+    }
+
+    function renderTables() {
+      tableTable.innerHTML = '';
+      
+      state.tables.forEach(table => {
+        const tr = document.createElement('tr');
+        
+        tr.innerHTML = '<td>' + table.name + '</td>' +
+          '<td>' + table.capacity + '</td>' +
+          '<td>' + table.status + '</td>' +
+          '<td>' +
+          '<button class="view-guests-btn" data-table-id="' + table.id + '">Ver Convidados</button>' +
+          '</td>';
+        
+        tableTable.appendChild(tr);
+      });
+      
+      // Adicionar eventos aos botões de ver convidados
+      document.querySelectorAll('.view-guests-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const tableId = btn.getAttribute('data-table-id');
+          viewTableGuests(tableId);
+        });
+      });
+    }
+
+    function viewTableGuests(tableId) {
+      const guests = state.guests.filter(g => g.table_id == tableId);
+      if (!guests.length) {
+        return alert('Nenhum convidado nesta mesa');
+      }
+      
+      alert(guests.map(g => g.name).join('\n'));
+    }
+
+    addTableBtn.addEventListener('click', () => {
+      const name = prompt('Nome da mesa:');
+      if (!name) return;
+      
+      const capacity = prompt('Capacidade:');
+      if (!capacity) return;
+      
+      apiRequest('/api/events/' + state.currentEvent.id + '/tables', 'POST', {
+        name,
+        capacity: parseInt(capacity)
+      })
+      .then(() => {
+        loadTables();
+      })
+      .catch(showError);
+    });
+
+    // Check-in
+    checkinBtn.addEventListener('click', () => {
+      const code = checkinCode.value.trim();
+      if (!code) return;
+      
+      apiRequest('/api/events/' + state.currentEvent.id + '/checkin', 'POST', { code })
+        .then(data => {
+          checkinResult.style.display = 'block';
+          checkinResult.className = 'checkin-result';
+          
+          if (data.valid) {
+            checkinResult.classList.add('valid');
+            
+            if (data.alreadyCheckedIn) {
+              checkinResult.innerHTML = '<h3>Convidado já fez check-in</h3>' +
+                '<p><strong>Nome:</strong> ' + data.guest.name + '</p>' +
+                '<p><strong>Mesa:</strong> ' + (data.guest.table || 'Não atribuída') + '</p>';
+            } else {
+              checkinResult.innerHTML = '<h3>Check-in confirmado!</h3>' +
+                '<p><strong>Nome:</strong> ' + data.guest.name + '</p>' +
+                '<p><strong>Mesa:</strong> ' + (data.guest.table || 'Não atribuída') + '</p>';
+            }
+          } else {
+            checkinResult.classList.add('invalid');
+            checkinResult.innerHTML = '<h3>Código inválido</h3><p>' + data.message + '</p>';
+          }
+          
+          loadGuests();
+          loadTables();
+          loadReports();
+        })
+        .catch(showError);
+    });
+
+    // Relatórios
+    function loadReports() {
+      if (!state.currentEvent) return;
+      
+      const totalGuests = state.guests.length;
+      const confirmedGuests = state.guests.filter(g => g.status === 'confirmed').length;
+      const checkedInGuests = state.guests.filter(g => g.checked_in).length;
+      
+      let occupancy = 0;
+      if (state.tables.length) {
+        const totalCapacity = state.tables.reduce((sum, table) => sum + table.capacity, 0);
+        const usedCapacity = state.guests.filter(g => g.table_id).length;
+        occupancy = Math.round((usedCapacity / totalCapacity) * 100);
+      }
+      
+      document.getElementById('total-guests').textContent = totalGuests;
+      document.getElementById('confirmed-guests').textContent = confirmedGuests;
+      document.getElementById('checked-in-guests').textContent = checkedInGuests;
+      document.getElementById('tables-occupancy').textContent = occupancy + '%';
+    }
+
+    // Backup
+    createBackupBtn.addEventListener('click', () => {
+      const password = backupPassword.value;
+      if (!password) {
+        return showError('Digite uma senha para o backup');
+      }
+      
+      apiRequest('/api/events/' + state.currentEvent.id + '/backup', 'POST', { password })
+        .then(data => {
+          alert('Backup criado com sucesso: ' + data.file);
+        })
+        .catch(showError);
+    });
+
+    restoreBackupBtn.addEventListener('click', () => {
+      const file = restoreFile.files[0];
+      const password = restorePassword.value;
+      
+      if (!file || !password) {
+        return showError('Selecione um arquivo e digite a senha');
+      }
+      
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('password', password);
+      
+      fetch('/api/events/' + state.currentEvent.id + '/restore', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + state.token
+        },
+        body: formData
+      })
+      .then(response => {
+        if (!response.ok) {
+          return response.json().then(err => {
+            throw new Error(err.error || 'Erro na restauração');
+          });
+        }
+        return response.json();
+      })
+      .then(() => {
+        alert('Backup restaurado com sucesso');
+        loadGuests();
+        loadTables();
+      })
+      .catch(showError);
+    });
+
+    // Inicialização
+    if (window.location.hash === '#debug') {
+      loginEmail.value = 'admin@example.com';
+      loginPassword.value = 'admin123';
+    }
+  </script>
+</body>
+</html>
