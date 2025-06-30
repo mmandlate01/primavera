@@ -1,0 +1,21 @@
+{
+  "name": "primavera",
+  "version": "1.0.0",
+  "description": "",
+  "main": "school-management.js",
+  "scripts": {
+    "start": "node school-management.js",
+    "test": "echo \"No tests specified\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs"
+,
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.0",
+    "sqlite3": "^5.1.6"
+  }
+}
